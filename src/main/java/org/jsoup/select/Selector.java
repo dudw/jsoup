@@ -25,7 +25,7 @@ import java.util.IdentityHashMap;
  * <tr><th align="left">Pattern</th><th align="left">Matches</th><th align="left">Example</th></tr>
  * <tr><td><code>*</code></td><td>any element</td><td><code>*</code></td></tr>
  * <tr><td><code>tag</code></td><td>elements with the given tag name</td><td><code>div</code></td></tr>
- * <tr><td><code>*|E</code></td><td>elements of type E in any namespace <i>ns</i></td><td><code>*|name</code> finds <code>&lt;fb:name&gt;</code> elements</td></tr>
+ * <tr><td><code>*|E</code></td><td>elements of type E in any namespace (including non-namespaced)</td><td><code>*|name</code> finds <code>&lt;fb:name&gt;</code> and <code>&lt;name&gt;</code> elements</td></tr>
  * <tr><td><code>ns|E</code></td><td>elements of type E in the namespace <i>ns</i></td><td><code>fb|name</code> finds <code>&lt;fb:name&gt;</code> elements</td></tr>
  * <tr><td><code>#id</code></td><td>elements with attribute ID of "id"</td><td><code>div#wrap</code>, <code>#logo</code></td></tr>
  * <tr><td><code>.class</code></td><td>elements with a class name of "class"</td><td><code>div.left</code>, <code>.result</code></td></tr>
@@ -72,6 +72,8 @@ import java.util.IdentityHashMap;
  * <tr><td><code>:only-of-type</code></td><td> an element that has a parent element and whose parent element has no other element children with the same expanded element name</td><td></td></tr>
  * <tr><td><code>:empty</code></td><td>elements that have no children at all</td><td></td></tr>
  * </table>
+ *
+ * <p>A word on using regular expressions in these selectors: depending on the content of the regex, you will need to quote the pattern using <b><code>Pattern.quote("regex")</code></b> for it to parse correclty through both the selector parser and the regex parser. E.g. <code>String query = "div:matches(" + Pattern.quote(regex) + ");"</code>.</p>
  *
  * @author Jonathan Hedley, jonathan@hedley.net
  * @see Element#select(String)

@@ -356,6 +356,7 @@ public class HtmlTreeBuilder extends TreeBuilder {
         return false;
     }
 
+    @Nullable
     Element popStackToClose(String elName) {
         for (int pos = stack.size() -1; pos >= 0; pos--) {
             Element el = stack.get(pos);
@@ -437,17 +438,20 @@ public class HtmlTreeBuilder extends TreeBuilder {
     }
 
     void resetInsertionMode() {
+        // https://html.spec.whatwg.org/multipage/parsing.html#the-insertion-mode
         boolean last = false;
         for (int pos = stack.size() -1; pos >= 0; pos--) {
             Element node = stack.get(pos);
             if (pos == 0) {
                 last = true;
-                node = contextElement;
+                if (fragmentParsing)
+                    node = contextElement;
             }
             String name = node != null ? node.normalName() : "";
             if ("select".equals(name)) {
                 transition(HtmlTreeBuilderState.InSelect);
-                break; // frag
+                // todo - should loop up (with some limit) and check for table or template hits
+                break;
             } else if (("td".equals(name) || "th".equals(name) && !last)) {
                 transition(HtmlTreeBuilderState.InCell);
                 break;
@@ -462,25 +466,26 @@ public class HtmlTreeBuilder extends TreeBuilder {
                 break;
             } else if ("colgroup".equals(name)) {
                 transition(HtmlTreeBuilderState.InColumnGroup);
-                break; // frag
+                break;
             } else if ("table".equals(name)) {
                 transition(HtmlTreeBuilderState.InTable);
                 break;
-            } else if ("head".equals(name)) {
-                transition(HtmlTreeBuilderState.InBody);
-                break; // frag
+            // todo - template
+            } else if ("head".equals(name) && !last) {
+                transition(HtmlTreeBuilderState.InHead);
+                break;
             } else if ("body".equals(name)) {
                 transition(HtmlTreeBuilderState.InBody);
                 break;
             } else if ("frameset".equals(name)) {
                 transition(HtmlTreeBuilderState.InFrameset);
-                break; // frag
+                break;
             } else if ("html".equals(name)) {
-                transition(HtmlTreeBuilderState.BeforeHead);
-                break; // frag
+                transition(headElement == null ? HtmlTreeBuilderState.BeforeHead : HtmlTreeBuilderState.AfterHead);
+                break;
             } else if (last) {
                 transition(HtmlTreeBuilderState.InBody);
-                break; // frag
+                break;
             }
         }
     }
@@ -631,13 +636,18 @@ public class HtmlTreeBuilder extends TreeBuilder {
 
     // active formatting elements
     void pushActiveFormattingElements(Element in) {
-        this.checkActiveFormattingElements(in);
+        checkActiveFormattingElements(in);
         formattingElements.add(in);
     }
 
-    void pushWithBookmark(Element in,int bookmark){
-        this.checkActiveFormattingElements(in);
-        formattingElements.add(bookmark, in);
+    void pushWithBookmark(Element in, int bookmark){
+        checkActiveFormattingElements(in);
+        // catch any range errors and assume bookmark is incorrect - saves a redundant range check.
+        try {
+            formattingElements.add(bookmark, in);
+        } catch (IndexOutOfBoundsException e) {
+            formattingElements.add(in);
+        }
     }
 
     void checkActiveFormattingElements(Element in){
