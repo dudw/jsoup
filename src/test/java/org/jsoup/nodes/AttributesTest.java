@@ -297,7 +297,7 @@ public class AttributesTest {
         a.put(Attributes.internalKey("last"), "example.com");
         a.remove(Attributes.internalKey("last"));
 
-        assertEquals(4, a.size());
+        assertEquals(2, a.size());
         assertEquals(2, a.asList().size()); // excluded from lists
     }
 
@@ -394,5 +394,41 @@ public class AttributesTest {
         Attributes two = one.clone();
         assertSame(two.userData("data"), one.userData("data"));
         assertNotSame(two.userData(), one.userData());
+    }
+
+    @Test void dontCloneNullUserData() {
+        // https://github.com/jhy/jsoup/issues/2356
+        Element span1 = Jsoup.parse("<span id=1></span>").expectFirst("span");
+        Attributes attrs1 = span1.attributes();
+        assertFalse(attrs1.isEmpty());
+        span1.removeAttr("id");
+        assertTrue(attrs1.isEmpty());
+
+        Element span2 = span1.clone();
+        Attributes attrs2 = span2.attributes();
+        assertTrue(attrs2.isEmpty());
+    }
+
+    @Test void sizeDoesNotIncludeInternal() {
+        Element el = new Element("el");
+        Attributes attrs = el.attributes();
+        assertEquals(0, attrs.size());
+        assertTrue(attrs.isEmpty());
+
+        attrs.userData("foo", "bar");
+        attrs.put(Attributes.internalKey("qux"), "bar");
+        assertEquals(0, attrs.size());
+        assertEquals(2, attrs.size);
+        assertTrue(attrs.isEmpty());
+
+        attrs.put("foo", "bar");
+        attrs.put("qux", "bar");
+        assertEquals(2, attrs.size());
+        assertEquals(4, attrs.size);
+
+        el.clearAttributes();
+        assertEquals(0, attrs.size());
+        assertEquals(2, attrs.size); // we keep the internals
+        assertTrue(attrs.isEmpty());
     }
 }

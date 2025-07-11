@@ -391,12 +391,15 @@ public class Element extends Node implements Iterable<Element> {
      */
     List<Element> childElementsList() {
         if (childNodeSize() == 0) return EmptyChildren; // short circuit creating empty
-        List<Element> children = cachedChildren();
-        if (children == null) {
-            children = filterNodes(Element.class);
-            stashChildren(children);
+        // set atomically, so works in multi-thread. Calling methods look like reads, so should be thread-safe
+        synchronized (childNodes) { // sync vs re-entrant lock, to save another field
+            List<Element> children = cachedChildren();
+            if (children == null) {
+                children = filterNodes(Element.class);
+                stashChildren(children);
+            }
+            return children;
         }
-        return children;
     }
 
     private static final String childElsKey = "jsoup.childEls";
@@ -2010,7 +2013,7 @@ public class Element extends Node implements Iterable<Element> {
     public Element clearAttributes() {
         if (attributes != null) {
             super.clearAttributes(); // keeps internal attributes via iterator
-            if (attributes.size() == 0)
+            if (attributes.size == 0)
                 attributes = null; // only remove entirely if no internal attributes
         }
 
